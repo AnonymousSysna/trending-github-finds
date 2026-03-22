@@ -12,10 +12,22 @@ const subscribeSchema = z.object({
   utm_campaign: z.string().optional(),
 });
 
+function getRequestOrigin(req: NextRequest): string {
+  const proto = req.headers.get("x-forwarded-proto");
+  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
+
+  if (proto && host) {
+    return `${proto}://${host}`;
+  }
+
+  return req.nextUrl.origin;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const data = subscribeSchema.parse(body);
+    const requestOrigin = getRequestOrigin(req);
 
     // Check if already subscribed
     const existing = await prisma.subscriber.findUnique({
@@ -30,7 +42,7 @@ export async function POST(req: NextRequest) {
         );
       }
       // Resend confirmation
-      await sendConfirmationEmail(data.email, existing.confirmToken);
+      await sendConfirmationEmail(data.email, existing.confirmToken, requestOrigin);
       return NextResponse.json(
         { message: "Confirmation email resent. Check your inbox!" },
         { status: 200 }
@@ -48,7 +60,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    await sendConfirmationEmail(data.email, subscriber.confirmToken);
+    await sendConfirmationEmail(data.email, subscriber.confirmToken, requestOrigin);
 
     return NextResponse.json(
       { message: "Check your email to confirm your subscription!" },

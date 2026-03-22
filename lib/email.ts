@@ -7,13 +7,35 @@ function getResend() {
   return new Resend(process.env.RESEND_API_KEY ?? "placeholder");
 }
 const FROM = process.env.RESEND_FROM_EMAIL ?? "digest@example.com";
-const APP_URL = process.env.APP_URL ?? "http://localhost:3000";
+
+function normalizeBaseUrl(url: string): string {
+  return url.replace(/\/+$/, "");
+}
+
+function getAppUrl(): string {
+  const rawUrl =
+    process.env.APP_URL ??
+    process.env.NEXT_PUBLIC_APP_URL ??
+    (process.env.NODE_ENV === "production" ? undefined : "http://localhost:3000");
+
+  if (!rawUrl) {
+    throw new Error(
+      "Missing APP_URL (or NEXT_PUBLIC_APP_URL). Set it to your public site URL, e.g. https://updates.example.com"
+    );
+  }
+
+  return normalizeBaseUrl(rawUrl);
+}
+
+const APP_URL = getAppUrl();
 
 export async function sendConfirmationEmail(
   email: string,
-  confirmToken: string
+  confirmToken: string,
+  baseUrl?: string
 ): Promise<void> {
-  const confirmUrl = `${APP_URL}/digest/confirm?token=${confirmToken}`;
+  const origin = baseUrl ? normalizeBaseUrl(baseUrl) : APP_URL;
+  const confirmUrl = `${origin}/digest/confirm?token=${confirmToken}`;
 
   const resend = getResend();
   await resend.emails.send({
