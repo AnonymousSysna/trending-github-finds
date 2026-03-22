@@ -250,16 +250,33 @@ async function runPipeline() {
 
     if (!DRY_RUN) {
       const top10Repos = scored.slice(0, 10);
+      const weekday = new Date().getDay();
+      const includeWeekly = weekday === 1;
+
+      const [confirmedCount, dailyCount, weeklyCount] = await Promise.all([
+        prisma.subscriber.count({ where: { confirmed: true } }),
+        prisma.subscriber.count({ where: { confirmed: true, frequency: "daily" } }),
+        prisma.subscriber.count({ where: { confirmed: true, frequency: "weekly" } }),
+      ]);
+
+      console.log(
+        `[Pipeline] Subscribers confirmed=${confirmedCount}, daily=${dailyCount}, weekly=${weeklyCount}, weeklyIncluded=${includeWeekly}`
+      );
+
       const subscribers = await prisma.subscriber.findMany({
         where: {
           confirmed: true,
           OR: [
             { frequency: "daily" },
             // Weekly: only send on Mondays
-            ...(new Date().getDay() === 1 ? [{ frequency: "weekly" as const }] : []),
+            ...(includeWeekly ? [{ frequency: "weekly" as const }] : []),
           ],
         },
       });
+
+      console.log(
+        `[Pipeline] Eligible subscribers for this run: ${subscribers.length}`
+      );
 
       if (subscribers.length > 0 && top10Repos.length > 0) {
         // Fetch full repo data for email
@@ -326,6 +343,10 @@ async function runPipeline() {
           where: { id: { in: subscribers.map((s) => s.id) } },
           data: { lastEmailSent: new Date() },
         });
+      } else {
+        console.log(
+          `[Pipeline] Skipping email send (subscribers=${subscribers.length}, repos=${top10Repos.length})`
+        );
       }
     }
 

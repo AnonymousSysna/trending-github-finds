@@ -1,7 +1,16 @@
 import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 
-function getClient() {
-  return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+function getAnthropicClient() {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return null;
+  return new Anthropic({ apiKey });
+}
+
+function getOpenAIClient() {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return null;
+  return new OpenAI({ apiKey });
 }
 
 export interface AiSummary {
@@ -45,20 +54,44 @@ README excerpt:
 ${repo.readme || "(no readme)"}`;
 
   try {
-    const message = await getClient().messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 512,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: prompt }],
-    });
+    const anthropic = getAnthropicClient();
+    if (anthropic) {
+      const message = await anthropic.messages.create({
+        model: process.env.ANTHROPIC_MODEL ?? "claude-haiku-4-5-20251001",
+        max_tokens: 512,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: "user", content: prompt }],
+      });
 
-    const content = message.content[0];
-    if (content.type !== "text") return null;
+      const content = message.content[0];
+      if (content.type !== "text") return null;
 
-    // Strip markdown code fences if present (e.g. ```json ... ```)
-    const raw = content.text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
-    const parsed = JSON.parse(raw) as AiSummary;
-    return parsed;
+      // Strip markdown code fences if present (e.g. ```json ... ```)
+      const raw = content.text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
+      return JSON.parse(raw) as AiSummary;
+    }
+
+    const openai = getOpenAIClient();
+    if (openai) {
+      const response = await openai.responses.create({
+        model: process.env.OPENAI_MODEL ?? "gpt-4.1-mini",
+        input: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: prompt },
+        ],
+        max_output_tokens: 512,
+      });
+
+      const raw = response.output_text.trim();
+      if (!raw) return null;
+      const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
+      return JSON.parse(cleaned) as AiSummary;
+    }
+
+    console.warn(
+      "AI summarization skipped: missing ANTHROPIC_API_KEY and OPENAI_API_KEY."
+    );
+    return null;
   } catch (err) {
     console.error(`AI summarization failed for ${repo.owner}/${repo.name}:`, err);
     return null;
