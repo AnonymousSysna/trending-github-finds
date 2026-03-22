@@ -3,11 +3,18 @@
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Suspense } from "react";
+import { useEffect } from "react";
 
 function UnsubscribeContent() {
   const params = useSearchParams();
   const success = params.get("success") === "true";
   const error = params.get("error");
+  const token = params.get("token");
+
+  useEffect(() => {
+    if (!token || success || error) return;
+    window.location.href = `/api/unsubscribe?token=${encodeURIComponent(token)}`;
+  }, [token, success, error]);
 
   if (success) {
     return (
