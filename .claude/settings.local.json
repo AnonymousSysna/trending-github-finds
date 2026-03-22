@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --no-src-dir --import-alias \"@/*\" --yes)",
+      "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --no-src-dir --import-alias \"@/*\" --yes --force)",
+      "Bash(mkdir -p \"/d/Documents/github/trending-app\")",
+      "Read(//d/Documents/github/**)",
+      "Bash(cmd /c \"mkdir D:\\\\Documents\\\\github\\\\trending-app\" 2>&1)",
+      "Bash(cmd /c \"cd /d D:\\\\Documents\\\\github\\\\trending && move goal.txt goal_backup.txt && npx create-next-app@latest . --typescript --tailwind --eslint --app --no-src-dir --import-alias @/* --yes 2>&1\")",
+      "Bash(npm --version)",
+      "Bash(npm install:*)",
+      "Bash(npm list:*)",
+      "Bash(npx prisma:*)",
+      "Bash(npx next:*)",
+      "Bash(cmd /c \"del /f D:\\\\Documents\\\\github\\\\trending\\\\next.config.ts\" 2>&1)",
+      "Bash(node:*)",
+      "WebFetch(domain:goey-toast.vercel.app)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:www.npmjs.com)",
+      "Bash(npm show:*)",
+      "Bash(npm pack:*)"
+    ]
+  }
+}

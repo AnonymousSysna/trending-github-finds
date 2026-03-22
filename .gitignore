@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Next.js
+.next/
+out/
+build/
+
+# Env — never commit secrets
+.env
+.env.local
+.env.production
+.env.production.local
+.env.development.local
+.env.test.local
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Prisma generated migrations (keep schema, ignore migrations)
+prisma/migrations/
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# PM2
+.pm2/
+
+# Misc
+goal.txt
+SETUP.md
+goey-toast-*.tgz

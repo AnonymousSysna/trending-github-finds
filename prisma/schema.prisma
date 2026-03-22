@@ -1,0 +1,114 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Repo {
+  id             Int       @id @default(autoincrement())
+  githubId       BigInt    @unique @map("github_id")
+  owner          String    @db.VarChar(255)
+  name           String    @db.VarChar(255)
+  description    String?
+  language       String?   @db.VarChar(100)
+  topics         String[]
+  starsTotal     Int       @default(0) @map("stars_total")
+  forksTotal     Int       @default(0) @map("forks_total")
+  openIssues     Int       @default(0) @map("open_issues")
+  license        String?   @db.VarChar(100)
+  homepageUrl    String?   @map("homepage_url")
+  htmlUrl        String    @map("html_url")
+  createdAtGh    DateTime? @map("created_at_gh")
+  pushedAt       DateTime? @map("pushed_at")
+  archived       Boolean   @default(false)
+  aiSummary      Json?     @map("ai_summary")
+  aiGeneratedAt  DateTime? @map("ai_generated_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  dailySnapshots DailySnapshot[]
+  bookmarks      Bookmark[]
+
+  @@index([language])
+  @@map("repos")
+}
+
+model DailySnapshot {
+  id             Int      @id @default(autoincrement())
+  repoId         Int      @map("repo_id")
+  snapshotDate   DateTime @map("snapshot_date") @db.Date
+  starsTotal     Int      @map("stars_total")
+  forksTotal     Int      @map("forks_total")
+  starsGained24h Int      @default(0) @map("stars_gained_24h")
+  starsGained7d  Int      @default(0) @map("stars_gained_7d")
+  forksGained7d  Int      @default(0) @map("forks_gained_7d")
+  trendScore     Float    @map("trend_score")
+  rank           Int?
+
+  repo Repo @relation(fields: [repoId], references: [id])
+
+  @@unique([repoId, snapshotDate])
+  @@index([snapshotDate, rank])
+  @@map("daily_snapshots")
+}
+
+model Subscriber {
+  id               Int       @id @default(autoincrement())
+  email            String    @unique @db.VarChar(320)
+  frequency        String    @default("daily") @db.VarChar(10)
+  confirmed        Boolean   @default(false)
+  confirmToken     String    @default(dbgenerated("gen_random_uuid()")) @map("confirm_token") @db.Uuid
+  unsubscribeToken String    @default(dbgenerated("gen_random_uuid()")) @map("unsubscribe_token") @db.Uuid
+  subscribedAt     DateTime  @default(now()) @map("subscribed_at")
+  confirmedAt      DateTime? @map("confirmed_at")
+  lastEmailSent    DateTime? @map("last_email_sent")
+  source           String?   @db.VarChar(100)
+  utmSource        String?   @map("utm_source") @db.VarChar(255)
+  utmMedium        String?   @map("utm_medium") @db.VarChar(255)
+  utmCampaign      String?   @map("utm_campaign") @db.VarChar(255)
+
+  @@index([confirmed])
+  @@map("subscribers")
+}
+
+model Bookmark {
+  id           Int      @id @default(autoincrement())
+  sessionToken String   @map("session_token") @db.Uuid
+  repoId       Int      @map("repo_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  repo Repo @relation(fields: [repoId], references: [id])
+
+  @@unique([sessionToken, repoId])
+  @@map("bookmarks")
+}
+
+model PipelineRun {
+  id              Int       @id @default(autoincrement())
+  runDate         DateTime  @map("run_date") @db.Date
+  startedAt       DateTime? @map("started_at")
+  completedAt     DateTime? @map("completed_at")
+  status          String    @db.VarChar(20)
+  reposFetched    Int?      @map("repos_fetched")
+  reposScored     Int?      @map("repos_scored")
+  reposSummarized Int?      @map("repos_summarized")
+  emailsSent      Int?      @map("emails_sent")
+  errorLog        Json?     @map("error_log")
+  durationMs      Int?      @map("duration_ms")
+
+  @@map("pipeline_runs")
+}
+
+model AbExperiment {
+  id            Int      @id @default(autoincrement())
+  experimentKey String   @unique @map("experiment_key") @db.VarChar(100)
+  variantA      Json     @map("variant_a")
+  variantB      Json     @map("variant_b")
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("ab_experiments")
+}
