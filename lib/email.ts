@@ -35,7 +35,7 @@ export async function sendConfirmationEmail(
   baseUrl?: string
 ): Promise<void> {
   const origin = baseUrl ? normalizeBaseUrl(baseUrl) : APP_URL;
-  const confirmUrl = `${origin}/digest/confirm?token=${confirmToken}`;
+  const confirmUrl = `${origin}/api/confirm?token=${confirmToken}`;
 
   const resend = getResend();
   await resend.emails.send({

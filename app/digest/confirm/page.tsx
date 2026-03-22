@@ -1,6 +1,18 @@
+import { redirect } from "next/navigation";
 import Link from "next/link";
 
-export default function ConfirmPage() {
+type ConfirmPageProps = {
+  searchParams?: {
+    token?: string;
+  };
+};
+
+export default function ConfirmPage({ searchParams }: ConfirmPageProps) {
+  const token = searchParams?.token;
+  if (token) {
+    redirect(`/api/confirm?token=${encodeURIComponent(token)}`);
+  }
+
   return (
     <div className="mx-auto max-w-md px-4 py-20 text-center">
       <div className="text-5xl mb-6">🎉</div>
