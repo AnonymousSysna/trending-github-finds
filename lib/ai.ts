@@ -24,6 +24,56 @@ export interface AiSummary {
 
 const SYSTEM_PROMPT = "Respond with valid JSON only.";
 
+function parseSummaryJson(rawText: string): AiSummary {
+  const normalized = rawText
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```\s*$/i, "")
+    .trim();
+
+  const tryParse = (text: string): AiSummary | null => {
+    try {
+      const parsed = JSON.parse(text) as unknown;
+      if (typeof parsed === "string") {
+        return tryParse(parsed);
+      }
+      if (
+        parsed &&
+        typeof parsed === "object" &&
+        "what_it_does" in parsed &&
+        "why_trending" in parsed &&
+        "who_should_care" in parsed &&
+        "tags" in parsed &&
+        "hook" in parsed
+      ) {
+        return parsed as AiSummary;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  };
+
+  const direct = tryParse(normalized);
+  if (direct) return direct;
+
+  const firstBrace = normalized.indexOf("{");
+  const lastBrace = normalized.lastIndexOf("}");
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    const extracted = normalized.slice(firstBrace, lastBrace + 1);
+    const extractedParsed = tryParse(extracted);
+    if (extractedParsed) return extractedParsed;
+  }
+
+  const unescaped = normalized
+    .replace(/\\"/g, '"')
+    .replace(/\\n/g, "\n")
+    .replace(/\\t/g, "\t");
+  const unescapedParsed = tryParse(unescaped);
+  if (unescapedParsed) return unescapedParsed;
+
+  throw new SyntaxError("AI response was not valid summary JSON");
+}
+
 export async function summarizeRepo(repo: {
   owner: string;
   name: string;
@@ -77,9 +127,7 @@ Respond ONLY with valid JSON matching this schema:
       const content = message.content[0];
       if (content.type !== "text") return null;
 
-      // Strip markdown code fences if present (e.g. ```json ... ```)
-      const raw = content.text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
-      return JSON.parse(raw) as AiSummary;
+      return parseSummaryJson(content.text);
     } catch (err) {
       console.warn(
         `Anthropic summarization failed for ${repo.owner}/${repo.name}; falling back to OpenAI:`,
@@ -102,8 +150,7 @@ Respond ONLY with valid JSON matching this schema:
 
       const raw = response.output_text.trim();
       if (!raw) return null;
-      const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
-      return JSON.parse(cleaned) as AiSummary;
+      return parseSummaryJson(raw);
     }
 
     console.warn(
