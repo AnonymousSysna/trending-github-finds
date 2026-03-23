@@ -49,7 +49,7 @@ export function RepoCard({ repo, rank, isHiddenGem }: RepoCardProps) {
           <span>{repo.name}</span>
         </Link>
         <span className="shrink-0 text-xs text-gray-500 flex items-center gap-1 mt-0.5">
-          â˜… {repo.starsTotal.toLocaleString()}
+          ★ {repo.starsTotal.toLocaleString()}
         </span>
       </div>
 
@@ -101,13 +101,13 @@ export function RepoCard({ repo, rank, isHiddenGem }: RepoCardProps) {
           rel="noopener noreferrer"
           className="text-xs text-gray-400 hover:text-white transition-colors flex items-center gap-1"
         >
-          View on GitHub â†—
+          View on GitHub →
         </a>
         <Link
           href={`/repo/${repo.owner}/${repo.name}`}
           className="text-xs text-gray-500 hover:text-gray-300 transition-colors ml-auto"
         >
-          Details â†’
+          Details →
         </Link>
       </div>
     </article>

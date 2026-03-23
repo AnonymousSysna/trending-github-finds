@@ -17,9 +17,9 @@ export async function generateMetadata({ params }: RepoPageProps): Promise<Metad
   if (!repo) return {};
 
   return {
-    title: `${repo.name} by ${repo.owner} â€” Why It's Trending on GitHub`,
+    title: `${repo.name} by ${repo.owner} — Why It's Trending on GitHub`,
     description: repo.aiSummary?.what_it_does
-      ? `${repo.aiSummary.what_it_does} Â· ${repo.snapshot?.starsGained24h ?? 0} stars today Â· Discover why developers are excited about ${repo.name}.`
+      ? `${repo.aiSummary.what_it_does} · ${repo.snapshot?.starsGained24h ?? 0} stars today · Discover why developers are excited about ${repo.name}.`
       : repo.description ?? undefined,
     openGraph: {
       type: "article",
@@ -43,7 +43,7 @@ export default async function RepoDetailPage({ params }: RepoPageProps) {
     <div className="mx-auto max-w-3xl px-4 py-8">
       {/* Back link */}
       <Link href="/" className="text-sm text-gray-500 hover:text-gray-300 transition-colors mb-6 inline-flex items-center gap-1">
-        â† Back to Today&apos;s Trending
+        ← Back to Today&apos;s Trending
       </Link>
 
       {/* Header */}
@@ -55,7 +55,7 @@ export default async function RepoDetailPage({ params }: RepoPageProps) {
           </div>
           <div className="text-right shrink-0">
             <div className="text-2xl font-bold text-white">
-              â˜… {repo.starsTotal.toLocaleString()}
+              ★ {repo.starsTotal.toLocaleString()}
             </div>
             {repo.snapshot?.starsGained24h ? (
               <div className="text-sm text-green-400">
@@ -126,7 +126,7 @@ export default async function RepoDetailPage({ params }: RepoPageProps) {
           { label: "Stars", value: repo.starsTotal.toLocaleString() },
           { label: "Forks", value: repo.forksTotal.toLocaleString() },
           { label: "Issues", value: repo.openIssues.toLocaleString() },
-          { label: "Last commit", value: pushedAgo != null ? `${pushedAgo}d ago` : "â€”" },
+          { label: "Last commit", value: pushedAgo != null ? `${pushedAgo}d ago` : "—" },
         ].map((s) => (
           <div key={s.label} className="rounded-lg border border-white/8 bg-white/[0.02] p-3 text-center">
             <div className="text-lg font-bold text-white">{s.value}</div>
@@ -143,7 +143,7 @@ export default async function RepoDetailPage({ params }: RepoPageProps) {
           rel="noopener noreferrer"
           className="flex-1 text-center bg-white/10 hover:bg-white/15 text-white font-semibold py-3 rounded-xl transition-colors"
         >
-          View on GitHub â†—
+          View on GitHub →
         </a>
         {summary?.install_hint && (
           <CopyButton text={summary.install_hint} />

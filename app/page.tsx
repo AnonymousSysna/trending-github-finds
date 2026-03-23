@@ -57,18 +57,18 @@ export default async function HomePage({ searchParams }: HomeProps) {
           <div className="max-w-md mx-auto">
             <EmailCaptureForm
               source="hero"
-              ctaText="Get Daily Digest â†’"
+              ctaText="Get Daily Digest →"
             />
             <p className="text-xs text-gray-500 mt-2">
               {subscriberCount > 0
                 ? `Join ${subscriberCount.toLocaleString()} developers`
                 : "Join developers"}{" "}
-              Â· No spam Â· Unsubscribe anytime
+              · No spam · Unsubscribe anytime
             </p>
           </div>
 
           <p className="text-xs text-gray-600 mt-4">
-            LAST UPDATED: {lastUpdated} Â· {repos.length} repos analyzed
+            LAST UPDATED: {lastUpdated} · {repos.length} repos analyzed
           </p>
         </section>
 
@@ -93,7 +93,7 @@ export default async function HomePage({ searchParams }: HomeProps) {
                   Get the top 10 repos delivered to your inbox every morning.
                 </p>
                 <div className="max-w-sm mx-auto">
-                  <EmailCaptureForm source="mid-page" ctaText="Subscribe Free â†’" />
+                  <EmailCaptureForm source="mid-page" ctaText="Subscribe Free →" />
                 </div>
               </div>
             )}
@@ -109,7 +109,7 @@ export default async function HomePage({ searchParams }: HomeProps) {
         {/* Social proof strip */}
         {repos.length > 0 && (
           <div className="mt-12 text-center text-xs text-gray-600">
-            {subscriberCount > 0 && `${subscriberCount.toLocaleString()} subscribers Â· `}
+            {subscriberCount > 0 && `${subscriberCount.toLocaleString()} subscribers · `}
             Updated daily at 6AM UTC
           </div>
         )}
@@ -139,7 +139,7 @@ function StickyMobileCTA() {
         href="/digest"
         className="w-full text-center bg-green-500 text-black font-semibold text-sm py-3 rounded-lg"
       >
-        ðŸ“§ Get Daily Digest
+        Get Daily Digest
       </a>
     </div>
   );
