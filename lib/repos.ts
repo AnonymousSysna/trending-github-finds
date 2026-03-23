@@ -2,6 +2,14 @@ import { prisma } from "./db";
 import { cacheGet, cacheSet, CACHE_KEYS } from "./redis";
 import type { RepoWithSnapshot } from "./types";
 
+async function getLatestSnapshotDate(): Promise<Date | null> {
+  const latest = await prisma.dailySnapshot.findFirst({
+    orderBy: { snapshotDate: "desc" },
+    select: { snapshotDate: true },
+  });
+  return latest?.snapshotDate ?? null;
+}
+
 export async function getTodayTopRepos(
   options: {
     language?: string;
@@ -19,12 +27,12 @@ export async function getTodayTopRepos(
     if (cached) return cached.slice(0, limit);
   }
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const snapshotDate = await getLatestSnapshotDate();
+  if (!snapshotDate) return [];
 
   const snapshots = await prisma.dailySnapshot.findMany({
     where: {
-      snapshotDate: { gte: today },
+      snapshotDate,
       repo: {
         archived: false,
         ...(language ? { language } : {}),
@@ -123,12 +131,12 @@ export async function getSimilarRepos(
 ): Promise<RepoWithSnapshot[]> {
   if (topics.length === 0 && !language) return [];
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const snapshotDate = await getLatestSnapshotDate();
+  if (!snapshotDate) return [];
 
   const snapshots = await prisma.dailySnapshot.findMany({
     where: {
-      snapshotDate: { gte: today },
+      snapshotDate,
       repo: {
         id: { not: repoId },
         archived: false,

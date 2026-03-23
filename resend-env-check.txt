@@ -1,0 +1,9 @@
+Run this command exactly:
+
+node -e "const fs=require('fs'),p=require('path');const f=fs.existsSync(p.resolve('.env.production'))?'.env.production':'.env';require('dotenv').config({path:p.resolve(f)});console.log('envFile=',f);console.log('RESEND_FROM_EMAIL=',process.env.RESEND_FROM_EMAIL||'(missing)');console.log('RESEND_API_KEY set=',Boolean(process.env.RESEND_API_KEY));"
+
+If RESEND_FROM_EMAIL is missing, fix /var/www/trending/.env.production then run:
+
+npm run build
+pm2 restart trending-web --update-env
+npm run worker

@@ -6,7 +6,17 @@ import type { RepoWithSnapshot } from "./types";
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY ?? "placeholder");
 }
-const FROM = process.env.RESEND_FROM_EMAIL ?? "digest@example.com";
+
+function getFromEmail(): string {
+  const from = process.env.RESEND_FROM_EMAIL;
+  if (from) return from;
+
+  if (process.env.NODE_ENV === "test") return "digest@example.com";
+
+  throw new Error(
+    "Missing RESEND_FROM_EMAIL. Set it to your verified sender, e.g. admin@updates.githubfinds.dev"
+  );
+}
 
 function normalizeBaseUrl(url: string): string {
   return url.replace(/\/+$/, "");
@@ -27,19 +37,18 @@ function getAppUrl(): string {
   return normalizeBaseUrl(rawUrl);
 }
 
-const APP_URL = getAppUrl();
-
 export async function sendConfirmationEmail(
   email: string,
   confirmToken: string,
   baseUrl?: string
 ): Promise<void> {
-  const origin = baseUrl ? normalizeBaseUrl(baseUrl) : APP_URL;
+  const origin = baseUrl ? normalizeBaseUrl(baseUrl) : getAppUrl();
   const confirmUrl = `${origin}/api/confirm?token=${confirmToken}`;
 
   const resend = getResend();
-  await resend.emails.send({
-    from: FROM,
+  const from = getFromEmail();
+  const result = await resend.emails.send({
+    from,
     to: email,
     subject: "Confirm your GitHub digest subscription",
     html: `
@@ -55,6 +64,10 @@ export async function sendConfirmationEmail(
       </div>
     `,
   });
+
+  if (result.error) {
+    throw new Error(`Resend confirmation error: ${result.error.message}`);
+  }
 }
 
 export async function sendDigestEmail(
@@ -63,15 +76,17 @@ export async function sendDigestEmail(
   repos: RepoWithSnapshot[],
   date: string
 ): Promise<void> {
-  const unsubscribeUrl = `${APP_URL}/digest/unsubscribe?token=${unsubscribeToken}`;
+  const appUrl = getAppUrl();
+  const from = getFromEmail();
+  const unsubscribeUrl = `${appUrl}/digest/unsubscribe?token=${unsubscribeToken}`;
 
   const html = await render(
-    DigestEmail({ repos, date, unsubscribeUrl, appUrl: APP_URL }) as React.ReactElement
+    DigestEmail({ repos, date, unsubscribeUrl, appUrl }) as React.ReactElement
   );
 
   const resend = getResend();
-  await resend.emails.send({
-    from: FROM,
+  const result = await resend.emails.send({
+    from,
     to: email,
     subject: `🔥 Today's Top Trending GitHub Repos — ${date}`,
     html,
@@ -80,6 +95,10 @@ export async function sendDigestEmail(
       "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
     },
   });
+
+  if (result.error) {
+    throw new Error(`Resend digest error: ${result.error.message}`);
+  }
 }
 
 export async function sendDigestBatch(
