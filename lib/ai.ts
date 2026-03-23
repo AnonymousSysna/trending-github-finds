@@ -74,6 +74,38 @@ function parseSummaryJson(rawText: string): AiSummary {
   throw new SyntaxError("AI response was not valid summary JSON");
 }
 
+async function repairSummaryJsonWithOpenAI(
+  openai: OpenAI,
+  invalidOutput: string
+): Promise<AiSummary | null> {
+  const repairPrompt = `Convert the following text into valid JSON only.
+Schema:
+{
+  "what_it_does": "string",
+  "why_trending": "string",
+  "who_should_care": "string",
+  "tags": ["string"],
+  "hook": "string",
+  "install_hint": "string or null"
+}
+
+Text:
+${invalidOutput}`;
+
+  const repaired = await openai.responses.create({
+    model: process.env.OPENAI_MODEL ?? "gpt-4.1-mini",
+    input: [
+      { role: "system", content: "Return valid JSON only. No prose." },
+      { role: "user", content: repairPrompt },
+    ],
+    max_output_tokens: 300,
+  });
+
+  const repairedRaw = repaired.output_text.trim();
+  if (!repairedRaw) return null;
+  return parseSummaryJson(repairedRaw);
+}
+
 export async function summarizeRepo(repo: {
   owner: string;
   name: string;
@@ -150,7 +182,15 @@ Respond ONLY with valid JSON matching this schema:
 
       const raw = response.output_text.trim();
       if (!raw) return null;
-      return parseSummaryJson(raw);
+      try {
+        return parseSummaryJson(raw);
+      } catch (parseErr) {
+        console.warn(
+          `OpenAI returned invalid JSON for ${repo.owner}/${repo.name}; attempting repair pass:`,
+          parseErr
+        );
+        return await repairSummaryJsonWithOpenAI(openai, raw);
+      }
     }
 
     console.warn(
