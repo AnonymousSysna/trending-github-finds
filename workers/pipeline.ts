@@ -16,6 +16,7 @@
 import { config } from "dotenv";
 import { existsSync } from "fs";
 import { resolve } from "path";
+import type { Prisma } from "@prisma/client";
 
 // Load .env.production if it exists, otherwise fall back to .env
 const envFile = existsSync(resolve(process.cwd(), ".env.production"))
@@ -264,7 +265,7 @@ async function runPipeline() {
       await prisma.repo.updateMany({
         where: { owner, name },
         data: {
-          aiSummary: summary,
+          aiSummary: summary as unknown as Prisma.InputJsonValue,
           aiGeneratedAt: new Date(),
         },
       });
