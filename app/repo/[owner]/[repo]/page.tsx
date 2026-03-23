@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getRepoBySlug, getSimilarRepos } from "@/lib/repos";
@@ -17,9 +17,9 @@ export async function generateMetadata({ params }: RepoPageProps): Promise<Metad
   if (!repo) return {};
 
   return {
-    title: `${repo.name} by ${repo.owner} — Why It's Trending on GitHub`,
+    title: `${repo.name} by ${repo.owner} â€” Why It's Trending on GitHub`,
     description: repo.aiSummary?.what_it_does
-      ? `${repo.aiSummary.what_it_does} · ${repo.snapshot?.starsGained24h ?? 0} stars today · Discover why developers are excited about ${repo.name}.`
+      ? `${repo.aiSummary.what_it_does} Â· ${repo.snapshot?.starsGained24h ?? 0} stars today Â· Discover why developers are excited about ${repo.name}.`
       : repo.description ?? undefined,
     openGraph: {
       type: "article",
@@ -43,7 +43,7 @@ export default async function RepoDetailPage({ params }: RepoPageProps) {
     <div className="mx-auto max-w-3xl px-4 py-8">
       {/* Back link */}
       <Link href="/" className="text-sm text-gray-500 hover:text-gray-300 transition-colors mb-6 inline-flex items-center gap-1">
-        ← Back to Today&apos;s Trending
+        â† Back to Today&apos;s Trending
       </Link>
 
       {/* Header */}
@@ -55,7 +55,7 @@ export default async function RepoDetailPage({ params }: RepoPageProps) {
           </div>
           <div className="text-right shrink-0">
             <div className="text-2xl font-bold text-white">
-              ★ {repo.starsTotal.toLocaleString()}
+              â˜… {repo.starsTotal.toLocaleString()}
             </div>
             {repo.snapshot?.starsGained24h ? (
               <div className="text-sm text-green-400">
@@ -96,18 +96,13 @@ export default async function RepoDetailPage({ params }: RepoPageProps) {
                 What it does
               </h2>
               <p className="text-gray-200 leading-relaxed">{summary.what_it_does}</p>
+              <p className="text-sm text-gray-400 mt-2">For: {summary.who_should_care}</p>
             </div>
             <div>
               <h2 className="text-xs font-bold uppercase tracking-wider text-orange-400 mb-1.5">
                 Why it&apos;s trending now
               </h2>
               <p className="text-gray-300 leading-relaxed">{summary.why_trending}</p>
-            </div>
-            <div>
-              <h2 className="text-xs font-bold uppercase tracking-wider text-blue-400 mb-1.5">
-                Who should care
-              </h2>
-              <p className="text-gray-300 leading-relaxed">{summary.who_should_care}</p>
             </div>
             {summary.install_hint && (
               <div>
@@ -131,7 +126,7 @@ export default async function RepoDetailPage({ params }: RepoPageProps) {
           { label: "Stars", value: repo.starsTotal.toLocaleString() },
           { label: "Forks", value: repo.forksTotal.toLocaleString() },
           { label: "Issues", value: repo.openIssues.toLocaleString() },
-          { label: "Last commit", value: pushedAgo != null ? `${pushedAgo}d ago` : "—" },
+          { label: "Last commit", value: pushedAgo != null ? `${pushedAgo}d ago` : "â€”" },
         ].map((s) => (
           <div key={s.label} className="rounded-lg border border-white/8 bg-white/[0.02] p-3 text-center">
             <div className="text-lg font-bold text-white">{s.value}</div>
@@ -148,7 +143,7 @@ export default async function RepoDetailPage({ params }: RepoPageProps) {
           rel="noopener noreferrer"
           className="flex-1 text-center bg-white/10 hover:bg-white/15 text-white font-semibold py-3 rounded-xl transition-colors"
         >
-          View on GitHub ↗
+          View on GitHub â†—
         </a>
         {summary?.install_hint && (
           <CopyButton text={summary.install_hint} />
@@ -161,7 +156,7 @@ export default async function RepoDetailPage({ params }: RepoPageProps) {
           <h2 className="text-lg font-bold text-white mb-4">Similar repos you might like</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {similar.map((r, i) => (
-              <RepoCard key={r.id} repo={r} rank={i + 1} />
+              <RepoCard key={r.id} repo={r} rank={i + 1} isHiddenGem={r.isHiddenGem} />
             ))}
           </div>
         </section>
@@ -180,3 +175,4 @@ export default async function RepoDetailPage({ params }: RepoPageProps) {
     </div>
   );
 }
+

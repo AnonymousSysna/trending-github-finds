@@ -38,3 +38,6 @@ next-env.d.ts
 goal.txt
 SETUP.md
 goey-toast-*.tgz
+
+#Claude
+.claude

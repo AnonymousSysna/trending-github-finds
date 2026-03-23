@@ -43,6 +43,11 @@ export function DigestEmail({
             const summary = repo.aiSummary;
             return (
               <Section key={repo.id} style={repoSection}>
+                {repo.isHiddenGem && (
+                  <Text style={hiddenGemLabel}>
+                    Hidden Gem · Low stars, high momentum
+                  </Text>
+                )}
                 <Text style={rankBadge}>#{i + 1}</Text>
                 <Heading as="h2" style={repoTitle}>
                   <Link
@@ -144,6 +149,14 @@ const rankBadge = {
   fontSize: "12px",
   fontWeight: "700",
   margin: "0 0 4px",
+  textTransform: "uppercase" as const,
+  letterSpacing: "0.05em",
+};
+
+const hiddenGemLabel = {
+  color: "#22c55e",
+  fontSize: "11px",
+  margin: "0 0 6px",
   textTransform: "uppercase" as const,
   letterSpacing: "0.05em",
 };

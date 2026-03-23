@@ -13,6 +13,8 @@ export interface RepoWithSnapshot {
   homepageUrl: string | null;
   pushedAt: Date | null;
   aiSummary: AiSummary | null;
+  isHiddenGem: boolean;
+  isStartupRelevant: boolean;
   snapshot: {
     starsGained24h: number;
     starsGained7d: number;
@@ -27,5 +29,5 @@ export interface AiSummary {
   who_should_care: string;
   tags: string[];
   hook: string;
-  install_hint?: string;
+  install_hint?: string | null;
 }

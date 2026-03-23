@@ -47,6 +47,8 @@ model DailySnapshot {
   forksGained7d  Int      @default(0) @map("forks_gained_7d")
   trendScore     Float    @map("trend_score")
   rank           Int?
+  isHiddenGem    Boolean  @default(false) @map("is_hidden_gem") // RUN: npx prisma db push
+  isStartupRelevant Boolean @default(false) @map("is_startup_relevant") // RUN: npx prisma db push
 
   repo Repo @relation(fields: [repoId], references: [id])
 

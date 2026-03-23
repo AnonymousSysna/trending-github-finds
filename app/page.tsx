@@ -1,28 +1,32 @@
-export const dynamic = "force-dynamic";
+﻿export const dynamic = "force-dynamic";
 
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { getTodayTopRepos } from "@/lib/repos";
+import { getTodayTopRepos, type RepoFilter } from "@/lib/repos";
 import { prisma } from "@/lib/db";
 import { RepoCard } from "@/components/RepoCard";
 import { FilterBar } from "@/components/FilterBar";
 import { EmailCaptureForm } from "@/components/EmailCaptureForm";
 
 export const metadata: Metadata = {
-  title: "Trending GitHub Repos Today — AI-Summarized for Developers",
+  title: "GitHub Trending Repos Worth Building With | GitHubFinds",
   description:
-    "Discover the top trending GitHub repositories daily. AI summaries, star momentum scores, and daily email digest.",
+    "Daily ranked repos by momentum, not just stars. Hidden gems, startup tools, and underrated projects — curated for developers who ship.",
 };
 
 interface HomeProps {
-  searchParams: Promise<{ lang?: string; topic?: string }>;
+  searchParams: Promise<{ lang?: string; topic?: string; filter?: string }>;
 }
 
 export default async function HomePage({ searchParams }: HomeProps) {
-  const { lang, topic } = await searchParams;
+  const { lang, topic, filter: rawFilter } = await searchParams;
+  const filter: RepoFilter | undefined =
+    rawFilter === "hidden-gems" || rawFilter === "startup-ideas"
+      ? rawFilter
+      : undefined;
 
   const [repos, subscriberCount] = await Promise.all([
-    getTodayTopRepos({ language: lang, topic, limit: 20 }).catch(() => []),
+    getTodayTopRepos({ language: lang, topic, filter, limit: 20 }).catch(() => []),
     prisma.subscriber.count({ where: { confirmed: true } }).catch(() => 0),
   ]);
 
@@ -44,27 +48,27 @@ export default async function HomePage({ searchParams }: HomeProps) {
         {/* Hero section */}
         <section className="text-center mb-10">
           <h1 className="text-3xl md:text-4xl font-bold text-white mb-3 text-balance">
-            Discover What Developers Are Building Today
+            GitHub&apos;s Most Interesting Repos, Ranked by Momentum
           </h1>
           <p className="text-gray-400 text-lg mb-6 max-w-xl mx-auto">
-            Top GitHub repos, ranked by momentum. AI-summarized. Delivered daily.
+            Not just what&apos;s popular — what&apos;s worth your attention. Daily picks for developers who build things.
           </p>
 
           <div className="max-w-md mx-auto">
             <EmailCaptureForm
               source="hero"
-              ctaText="Get Daily Digest →"
+              ctaText="Get Daily Digest â†’"
             />
             <p className="text-xs text-gray-500 mt-2">
               {subscriberCount > 0
                 ? `Join ${subscriberCount.toLocaleString()} developers`
                 : "Join developers"}{" "}
-              · No spam · Unsubscribe anytime
+              Â· No spam Â· Unsubscribe anytime
             </p>
           </div>
 
           <p className="text-xs text-gray-600 mt-4">
-            LAST UPDATED: {lastUpdated} · {repos.length} repos analyzed
+            LAST UPDATED: {lastUpdated} Â· {repos.length} repos analyzed
           </p>
         </section>
 
@@ -75,7 +79,7 @@ export default async function HomePage({ searchParams }: HomeProps) {
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {repos.slice(0, 6).map((repo, i) => (
-                <RepoCard key={repo.id} repo={repo} rank={i + 1} />
+                <RepoCard key={repo.id} repo={repo} rank={i + 1} isHiddenGem={repo.isHiddenGem} />
               ))}
             </div>
 
@@ -89,14 +93,14 @@ export default async function HomePage({ searchParams }: HomeProps) {
                   Get the top 10 repos delivered to your inbox every morning.
                 </p>
                 <div className="max-w-sm mx-auto">
-                  <EmailCaptureForm source="mid-page" ctaText="Subscribe Free →" />
+                  <EmailCaptureForm source="mid-page" ctaText="Subscribe Free â†’" />
                 </div>
               </div>
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {repos.slice(6).map((repo, i) => (
-                <RepoCard key={repo.id} repo={repo} rank={i + 7} />
+                <RepoCard key={repo.id} repo={repo} rank={i + 7} isHiddenGem={repo.isHiddenGem} />
               ))}
             </div>
           </>
@@ -105,7 +109,7 @@ export default async function HomePage({ searchParams }: HomeProps) {
         {/* Social proof strip */}
         {repos.length > 0 && (
           <div className="mt-12 text-center text-xs text-gray-600">
-            {subscriberCount > 0 && `${subscriberCount.toLocaleString()} subscribers · `}
+            {subscriberCount > 0 && `${subscriberCount.toLocaleString()} subscribers Â· `}
             Updated daily at 6AM UTC
           </div>
         )}
@@ -135,8 +139,9 @@ function StickyMobileCTA() {
         href="/digest"
         className="w-full text-center bg-green-500 text-black font-semibold text-sm py-3 rounded-lg"
       >
-        📧 Get Daily Digest
+        ðŸ“§ Get Daily Digest
       </a>
     </div>
   );
 }
+

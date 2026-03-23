@@ -59,8 +59,8 @@ export async function cacheInvalidate(pattern: string): Promise<void> {
 
 export const CACHE_KEYS = {
   todayRepos: "repos:today",
-  filteredRepos: (lang?: string, topic?: string) =>
-    `repos:filtered:${lang ?? "all"}:${topic ?? "all"}`,
+  filteredRepos: (lang?: string, topic?: string, filter?: string) =>
+    `repos:filtered:${lang ?? "all"}:${topic ?? "all"}:${filter ?? "all"}`,
   repoDetail: (owner: string, name: string) => `repo:${owner}:${name}`,
   subscriberCount: "stats:subscriber_count",
 };

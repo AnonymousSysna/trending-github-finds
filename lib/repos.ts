@@ -2,6 +2,8 @@ import { prisma } from "./db";
 import { cacheGet, cacheSet, CACHE_KEYS } from "./redis";
 import type { RepoWithSnapshot } from "./types";
 
+export type RepoFilter = "hidden-gems" | "startup-ideas";
+
 async function getLatestSnapshotDate(): Promise<Date | null> {
   const latest = await prisma.dailySnapshot.findFirst({
     orderBy: { snapshotDate: "desc" },
@@ -14,32 +16,44 @@ export async function getTodayTopRepos(
   options: {
     language?: string;
     topic?: string;
+    filter?: RepoFilter;
     limit?: number;
     useCache?: boolean;
   } = {}
 ): Promise<RepoWithSnapshot[]> {
-  const { language, topic, limit = 20, useCache = true } = options;
+  const { language, topic, filter, limit = 20, useCache = true } = options;
 
-  const cacheKey = CACHE_KEYS.filteredRepos(language, topic);
+  const cacheKey = CACHE_KEYS.filteredRepos(language, topic, filter);
 
   if (useCache) {
     const cached = await cacheGet<RepoWithSnapshot[]>(cacheKey);
     if (cached) return cached.slice(0, limit);
   }
 
-  const snapshotDate = await getLatestSnapshotDate();
+  const snapshotDate = filter
+    ? (() => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return today;
+      })()
+    : await getLatestSnapshotDate();
   if (!snapshotDate) return [];
 
   const snapshots = await prisma.dailySnapshot.findMany({
     where: {
       snapshotDate,
+      ...(filter === "hidden-gems" ? { isHiddenGem: true } : {}),
+      ...(filter === "startup-ideas" ? { isStartupRelevant: true } : {}),
       repo: {
         archived: false,
         ...(language ? { language } : {}),
         ...(topic ? { topics: { has: topic } } : {}),
       },
     },
-    orderBy: { rank: "asc" },
+    orderBy:
+      filter === "hidden-gems" || filter === "startup-ideas"
+        ? { trendScore: "desc" }
+        : { rank: "asc" },
     take: limit,
     include: {
       repo: true,
@@ -61,6 +75,8 @@ export async function getTodayTopRepos(
     homepageUrl: s.repo.homepageUrl,
     pushedAt: s.repo.pushedAt,
     aiSummary: s.repo.aiSummary as RepoWithSnapshot["aiSummary"],
+    isHiddenGem: s.isHiddenGem,
+    isStartupRelevant: s.isStartupRelevant,
     snapshot: {
       starsGained24h: s.starsGained24h,
       starsGained7d: s.starsGained7d,
@@ -112,6 +128,8 @@ export async function getRepoBySlug(
     homepageUrl: repo.homepageUrl,
     pushedAt: repo.pushedAt,
     aiSummary: repo.aiSummary as RepoWithSnapshot["aiSummary"],
+    isHiddenGem: snapshot?.isHiddenGem ?? false,
+    isStartupRelevant: snapshot?.isStartupRelevant ?? false,
     snapshot: snapshot
       ? {
           starsGained24h: snapshot.starsGained24h,
@@ -168,6 +186,8 @@ export async function getSimilarRepos(
     homepageUrl: s.repo.homepageUrl,
     pushedAt: s.repo.pushedAt,
     aiSummary: s.repo.aiSummary as RepoWithSnapshot["aiSummary"],
+    isHiddenGem: s.isHiddenGem,
+    isStartupRelevant: s.isStartupRelevant,
     snapshot: {
       starsGained24h: s.starsGained24h,
       starsGained7d: s.starsGained7d,

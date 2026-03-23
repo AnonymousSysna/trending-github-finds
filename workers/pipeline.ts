@@ -37,6 +37,55 @@ const LANGUAGES_TO_FETCH = [
 const MIN_STARS = 50;
 const MAX_REPOS_PER_PIPELINE = 100;
 
+function getMedian(values: number[]): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  if (sorted.length % 2 === 0) {
+    return (sorted[mid - 1] + sorted[mid]) / 2;
+  }
+  return sorted[mid];
+}
+
+function isStartupRelevant(
+  repo: { topics: string[] },
+  aiSummary?: { tags?: string[]; who_should_care?: string | null } | null
+): boolean {
+  const startupTags = new Set([
+    "saas",
+    "boilerplate",
+    "starter",
+    "sdk",
+    "api",
+    "auth",
+    "payments",
+    "self-hosted",
+    "open-source-alternative",
+    "cli",
+    "devtools",
+  ]);
+  const startupTopics = new Set([
+    "saas",
+    "boilerplate",
+    "starter-template",
+    "sdk",
+    "api-client",
+    "authentication",
+    "payments",
+  ]);
+  const audienceKeywords = ["founder", "startup", "indie", "solo", "side project"];
+
+  const summaryTags = (aiSummary?.tags ?? []).map((tag) => tag.toLowerCase());
+  const repoTopics = repo.topics.map((topic) => topic.toLowerCase());
+  const whoShouldCare = (aiSummary?.who_should_care ?? "").toLowerCase();
+
+  const hasStartupTag = summaryTags.some((tag) => startupTags.has(tag));
+  const hasStartupTopic = repoTopics.some((topic) => startupTopics.has(topic));
+  const hasAudienceSignal = audienceKeywords.some((keyword) => whoShouldCare.includes(keyword));
+
+  return hasStartupTag || hasStartupTopic || hasAudienceSignal;
+}
+
 async function runPipeline() {
   const startedAt = new Date();
   const runDate = new Date();
@@ -172,11 +221,20 @@ async function runPipeline() {
       .sort((a, b) => b.trendScore - a.trendScore)
       .map((r, i) => ({ ...r, rank: i + 1 }));
 
-    console.log(`[Pipeline] Scored ${scored.length} repos`);
+    const medianTrendScore = getMedian(scored.map((r) => r.trendScore));
+    const scoredWithFlags = scored.map((r) => ({
+      ...r,
+      isHiddenGem:
+        r.starsTotal < 500 &&
+        r.starsGained24h >= 20 &&
+        r.trendScore > medianTrendScore,
+    }));
+
+    console.log(`[Pipeline] Scored ${scoredWithFlags.length} repos`);
 
     // ─── Step 4: AI summarization ────────────────────────────────────────────
     console.log("[Pipeline] Step 4: AI summarizing...");
-    const toSummarize = scored.slice(0, 30); // only top 30 to save API cost
+    const toSummarize = scoredWithFlags.slice(0, 30); // only top 30 to save API cost
 
     // Fetch READMEs for top repos
     const withReadme = await Promise.all(
@@ -197,7 +255,7 @@ async function runPipeline() {
     );
 
     const summaries = DRY_RUN
-      ? new Map<string, { what_it_does: string; why_trending: string; who_should_care: string; tags: string[]; hook: string }>()
+      ? new Map<string, { what_it_does: string; why_trending: string; who_should_care: string; tags: string[]; hook: string; install_hint?: string | null }>()
       : await summarizeBatch(withReadme);
 
     let summarizedCount = 0;
@@ -213,9 +271,21 @@ async function runPipeline() {
       summarizedCount++;
     }
 
+    const scoredWithSignals = scoredWithFlags.map((r) => {
+      const ghRepo = candidates.find((c) => c.owner.login === r.owner && c.name === r.name);
+      const summary = summaries.get(`${r.owner}/${r.name}`);
+      return {
+        ...r,
+        isStartupRelevant: isStartupRelevant(
+          { topics: ghRepo?.topics ?? [] },
+          summary
+        ),
+      };
+    });
+
     // ─── Step 5: Persist daily snapshots ────────────────────────────────────
     console.log("[Pipeline] Step 5: Persisting snapshots...");
-    for (const r of scored) {
+    for (const r of scoredWithSignals) {
       await prisma.dailySnapshot.upsert({
         where: {
           repoId_snapshotDate: {
@@ -231,12 +301,16 @@ async function runPipeline() {
           starsGained24h: r.starsGained24h,
           trendScore: r.trendScore,
           rank: r.rank,
+          isHiddenGem: r.isHiddenGem,
+          isStartupRelevant: r.isStartupRelevant,
         },
         update: {
           starsTotal: r.starsTotal,
           starsGained24h: r.starsGained24h,
           trendScore: r.trendScore,
           rank: r.rank,
+          isHiddenGem: r.isHiddenGem,
+          isStartupRelevant: r.isStartupRelevant,
         },
       });
     }
@@ -249,7 +323,11 @@ async function runPipeline() {
     let emailsSent = 0;
 
     if (!DRY_RUN) {
-      const top10Repos = scored.slice(0, 10);
+      const top10Repos = scoredWithSignals.slice(0, 10);
+      const bonusHiddenGems = scoredWithSignals
+        .filter((r) => r.isHiddenGem && !top10Repos.some((top) => top.id === r.id))
+        .slice(0, 2);
+      const digestSelection = [...top10Repos, ...bonusHiddenGems];
       const weekday = new Date().getDay();
       const includeWeekly = weekday === 1;
 
@@ -278,10 +356,10 @@ async function runPipeline() {
         `[Pipeline] Eligible subscribers for this run: ${subscribers.length}`
       );
 
-      if (subscribers.length > 0 && top10Repos.length > 0) {
+      if (subscribers.length > 0 && digestSelection.length > 0) {
         // Fetch full repo data for email
         const repoData = await prisma.repo.findMany({
-          where: { id: { in: top10Repos.map((r) => r.id) } },
+          where: { id: { in: digestSelection.map((r) => r.id) } },
           include: {
             dailySnapshots: {
               where: { snapshotDate: { gte: runDate } },
@@ -291,7 +369,7 @@ async function runPipeline() {
           },
         });
 
-        const emailRepos = top10Repos.map((scored) => {
+        const emailRepos = digestSelection.map((scored) => {
           const repo = repoData.find((r) => r.id === scored.id)!;
           const snapshot = repo.dailySnapshots[0];
           return {
@@ -309,6 +387,8 @@ async function runPipeline() {
             homepageUrl: repo.homepageUrl,
             pushedAt: repo.pushedAt,
             aiSummary: repo.aiSummary as Parameters<typeof sendDigestBatch>[0][0] extends infer T ? T extends { email: string } ? never : unknown : never,
+            isHiddenGem: snapshot?.isHiddenGem ?? false,
+            isStartupRelevant: snapshot?.isStartupRelevant ?? false,
             snapshot: snapshot
               ? {
                   starsGained24h: snapshot.starsGained24h,
@@ -345,7 +425,7 @@ async function runPipeline() {
         });
       } else {
         console.log(
-          `[Pipeline] Skipping email send (subscribers=${subscribers.length}, repos=${top10Repos.length})`
+          `[Pipeline] Skipping email send (subscribers=${subscribers.length}, repos=${digestSelection.length})`
         );
       }
     }
@@ -360,7 +440,7 @@ async function runPipeline() {
         completedAt,
         status: "success",
         reposFetched: candidates.length,
-        reposScored: scored.length,
+        reposScored: scoredWithSignals.length,
         reposSummarized: summarizedCount,
         emailsSent,
         durationMs,
@@ -368,7 +448,7 @@ async function runPipeline() {
     });
 
     console.log(
-      `[Pipeline] Done in ${durationMs}ms. Scored: ${scored.length}, Summarized: ${summarizedCount}, Emails: ${emailsSent}`
+      `[Pipeline] Done in ${durationMs}ms. Scored: ${scoredWithSignals.length}, Summarized: ${summarizedCount}, Emails: ${emailsSent}`
     );
   } catch (err) {
     console.error("[Pipeline] Fatal error:", err);

@@ -19,20 +19,10 @@ export interface AiSummary {
   who_should_care: string;
   tags: string[];
   hook: string;
-  install_hint?: string;
+  install_hint?: string | null;
 }
 
-const SYSTEM_PROMPT = `You are a technical writer for a developer newsletter. Your job is to explain GitHub repositories in plain English for developers.
-
-Always respond with valid JSON matching this exact schema:
-{
-  "what_it_does": "One sentence, plain English, no jargon",
-  "why_trending": "Why this blew up now - timing, context, recent event, or community buzz (1-2 sentences)",
-  "who_should_care": "Specific audience e.g. 'Backend devs building RAG pipelines' or 'Teams migrating from Webpack'",
-  "tags": ["tag1", "tag2", "tag3"],
-  "hook": "Single punchy line for card display - make devs want to click",
-  "install_hint": "pip install package-name  (only if a clear install command exists, otherwise omit)"
-}`;
+const SYSTEM_PROMPT = "Respond with valid JSON only.";
 
 export async function summarizeRepo(repo: {
   owner: string;
@@ -44,14 +34,35 @@ export async function summarizeRepo(repo: {
   starsGained24h: number;
   readme: string;
 }): Promise<AiSummary | null> {
-  const prompt = `Repo: ${repo.owner}/${repo.name}
+  const prompt = `You are a senior developer writing punchy, opinionated repo summaries for other developers.
+
+Given a GitHub repo, write a summary that:
+1. Explains what it does in plain English (no marketing fluff, no repeating the repo name)
+2. Explains WHY it is trending right now - a specific reason, not "it gained stars"
+3. Identifies WHO should actually care - be specific (e.g. "Backend devs building RAG pipelines", not just "developers")
+4. Writes a single hook line that would make a developer stop scrolling - lead with the problem it solves, not the solution
+5. Generates 3-5 lowercase tags that are specific (e.g. "rag", "llm-routing", "self-hosted") not generic ("ai", "tool")
+6. Optionally includes the install command if it's a library/CLI
+
+Be opinionated. If a repo is genuinely useful, say so directly. If it solves a real pain point, name the pain point.
+
+Repo info:
+Name: ${repo.owner}/${repo.name}
 Language: ${repo.language ?? "unknown"}
-Stars: ${repo.stars.toLocaleString()} (+${repo.starsGained24h} in 24h)
+Stars: ${repo.stars.toLocaleString()}
 Topics: ${repo.topics.join(", ") || "none"}
 Description: ${repo.description ?? "none"}
+README excerpt: ${repo.readme || "(no readme)"}
 
-README excerpt:
-${repo.readme || "(no readme)"}`;
+Respond ONLY with valid JSON matching this schema:
+{
+  "what_it_does": "string",
+  "why_trending": "string",
+  "who_should_care": "string",
+  "tags": ["string"],
+  "hook": "string",
+  "install_hint": "string or null"
+}`;
 
   try {
     const anthropic = getAnthropicClient();

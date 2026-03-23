@@ -1,10 +1,12 @@
-"use client";
+﻿"use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { clsx } from "clsx";
 
 const QUICK_FILTERS = [
-  { label: "All", lang: undefined, topic: undefined },
+  { label: "All", lang: undefined, topic: undefined, filter: undefined },
+  { label: "Hidden Gems", filter: "hidden-gems" },
+  { label: "Startup Ideas", filter: "startup-ideas" },
   { label: "AI/ML", topic: "machine-learning" },
   { label: "DevTools", topic: "developer-tools" },
   { label: "Rust", lang: "Rust" },
@@ -20,11 +22,16 @@ export function FilterBar() {
   const params = useSearchParams();
   const activeLang = params.get("lang");
   const activeTopic = params.get("topic");
+  const activeFilter = params.get("filter");
 
-  function applyFilter(lang?: string, topic?: string) {
+  function applyFilter(lang?: string, topic?: string, filter?: string) {
     const p = new URLSearchParams();
-    if (lang) p.set("lang", lang);
-    if (topic) p.set("topic", topic);
+    if (filter) {
+      p.set("filter", filter);
+    } else {
+      if (lang) p.set("lang", lang);
+      if (topic) p.set("topic", topic);
+    }
     router.push(`/?${p.toString()}`);
   }
 
@@ -34,12 +41,13 @@ export function FilterBar() {
         <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
           {QUICK_FILTERS.map((f) => {
             const isActive =
+              (f.filter === activeFilter || (!f.filter && !activeFilter)) &&
               (f.lang === activeLang || (!f.lang && !activeLang)) &&
               (f.topic === activeTopic || (!f.topic && !activeTopic));
             return (
               <button
                 key={f.label}
-                onClick={() => applyFilter(f.lang, f.topic)}
+                onClick={() => applyFilter(f.lang, f.topic, f.filter)}
                 className={clsx(
                   "shrink-0 text-xs font-medium px-3 py-1.5 rounded-full transition-colors",
                   isActive
@@ -56,3 +64,4 @@ export function FilterBar() {
     </div>
   );
 }
+

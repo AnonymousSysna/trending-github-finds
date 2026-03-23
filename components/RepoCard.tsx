@@ -1,27 +1,35 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import type { RepoWithSnapshot } from "@/lib/types";
 
 interface RepoCardProps {
   repo: RepoWithSnapshot;
   rank: number;
+  isHiddenGem?: boolean;
 }
 
-export function RepoCard({ repo, rank }: RepoCardProps) {
+export function RepoCard({ repo, rank, isHiddenGem }: RepoCardProps) {
   const summary = repo.aiSummary;
   const starsToday = repo.snapshot?.starsGained24h ?? 0;
+  const hiddenGem = isHiddenGem ?? repo.isHiddenGem;
 
   return (
     <article className="group relative rounded-xl border border-white/8 bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/15 transition-all p-5">
-      {/* Rank + trending badge */}
+      {/* Rank + badge */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold text-green-400 uppercase tracking-wider">
             #{rank}
           </span>
-          {starsToday > 500 && (
-            <span className="text-xs bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded-full font-medium">
-              🔥 Trending
+          {hiddenGem ? (
+            <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full font-medium">
+              Hidden Gem
             </span>
+          ) : (
+            starsToday > 500 && (
+              <span className="text-xs bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded-full font-medium">
+                Trending
+              </span>
+            )
           )}
         </div>
         {starsToday > 0 && (
@@ -41,7 +49,7 @@ export function RepoCard({ repo, rank }: RepoCardProps) {
           <span>{repo.name}</span>
         </Link>
         <span className="shrink-0 text-xs text-gray-500 flex items-center gap-1 mt-0.5">
-          ★ {repo.starsTotal.toLocaleString()}
+          â˜… {repo.starsTotal.toLocaleString()}
         </span>
       </div>
 
@@ -93,15 +101,17 @@ export function RepoCard({ repo, rank }: RepoCardProps) {
           rel="noopener noreferrer"
           className="text-xs text-gray-400 hover:text-white transition-colors flex items-center gap-1"
         >
-          View on GitHub ↗
+          View on GitHub â†—
         </a>
         <Link
           href={`/repo/${repo.owner}/${repo.name}`}
           className="text-xs text-gray-500 hover:text-gray-300 transition-colors ml-auto"
         >
-          Details →
+          Details â†’
         </Link>
       </div>
     </article>
   );
 }
+
+

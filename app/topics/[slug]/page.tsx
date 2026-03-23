@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import { getTodayTopRepos } from "@/lib/repos";
 import { RepoCard } from "@/components/RepoCard";
 import { EmailCaptureForm } from "@/components/EmailCaptureForm";
@@ -34,7 +34,7 @@ export default async function TopicPage({ params }: Props) {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {repos.map((repo, i) => (
-            <RepoCard key={repo.id} repo={repo} rank={i + 1} />
+            <RepoCard key={repo.id} repo={repo} rank={i + 1} isHiddenGem={repo.isHiddenGem} />
           ))}
         </div>
       )}
@@ -48,3 +48,4 @@ export default async function TopicPage({ params }: Props) {
     </div>
   );
 }
+
