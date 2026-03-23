@@ -2,13 +2,13 @@ import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
 
 function getAnthropicClient() {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.ANTHROPIC_API_KEY?.replace(/\s+/g, "");
   if (!apiKey) return null;
   return new Anthropic({ apiKey });
 }
 
 function getOpenAIClient() {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.OPENAI_API_KEY?.replace(/\s+/g, "");
   if (!apiKey) return null;
   return new OpenAI({ apiKey });
 }
@@ -64,9 +64,9 @@ Respond ONLY with valid JSON matching this schema:
   "install_hint": "string or null"
 }`;
 
-  try {
-    const anthropic = getAnthropicClient();
-    if (anthropic) {
+  const anthropic = getAnthropicClient();
+  if (anthropic) {
+    try {
       const message = await anthropic.messages.create({
         model: process.env.ANTHROPIC_MODEL ?? "claude-haiku-4-5-20251001",
         max_tokens: 512,
@@ -80,8 +80,15 @@ Respond ONLY with valid JSON matching this schema:
       // Strip markdown code fences if present (e.g. ```json ... ```)
       const raw = content.text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
       return JSON.parse(raw) as AiSummary;
+    } catch (err) {
+      console.warn(
+        `Anthropic summarization failed for ${repo.owner}/${repo.name}; falling back to OpenAI:`,
+        err
+      );
     }
+  }
 
+  try {
     const openai = getOpenAIClient();
     if (openai) {
       const response = await openai.responses.create({
